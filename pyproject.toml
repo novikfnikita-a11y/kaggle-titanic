@@ -1,0 +1,36 @@
+[project]
+name = "kaggle-titanic"
+version = "0.1.0"
+description = "Reproducible machine-learning workflow for the Kaggle Titanic competition"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.11.2",
+    "mlflow>=3.0",
+    "numpy>=2.5.3",
+    "omegaconf>=2.4.0",
+    "pandas>=3.0.6",
+    "scikit-learn>=1.9.1",
+    "seaborn>=0.13.2",
+    "sweetviz>=2.3.3",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.4.0",
+    "kaggle>=2.2.5",
+    "notebook>=7.6.4",
+    "pytest>=8.0",
+    "ruff>=0.11",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
