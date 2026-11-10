@@ -1,29 +1,47 @@
+# main.py
 from pathlib import Path
-from kaggle_titanic.config import load_config
-from kaggle_titanic.data import load_data
+
+import hydra
+
+from omegaconf import DictConfig
+
+import mlflow 
+
+from src.kaggle_titanic.data import load_data
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+# config_path="conf"      указывает, что конфиги лежат в папке conf/ (рядом с main.py) оч удобно
+# config_name="config"    указывает на главный файл конфига conf/config.yaml
 
+@hydra.main(config_path="conf", config_name="config",version_base = '1.3')
+def main(cfg: DictConfig) -> None:
+    """
 
-def main() -> None:
-    base_config_path = PROJECT_ROOT / "configs" / "base.yaml"
-    model_config_path = PROJECT_ROOT / "configs" / "models" / "logreg.yaml"
+    hydra меняет рабочую директорию при запуске создает папку outputs хранит там
+    смерженные конфиги по времени запуска
 
-    config = load_config(base_config_path, model_config_path)
-    print("cfg is loaded")
+    
+    """
+    
+    mlflow.set_tracking_uri(cfg.mlflow.tracking_uri)
+    mlflow.set_experiment(cfg.mlflow.expiment_name)
 
-    dataset = load_data(config=config, project_root=PROJECT_ROOT)
-    print(
-        f"Data loaded: X_train {dataset.x_train.shape}, "
-        f"X_test {dataset.x_test.shape}"
-    )
-
-    # TODO: add log (mlflow)
-    # TODO: add feature engi
-    # TODO: add model training and evalu
-    # TODO: submission
-
+    
+    project_root = Path(__file__).parent.absolute()
+    
+    print(f" модель: {cfg.model.name}")
+    print(f" гиперпараметры : {cfg.model}")
+    print(f" набор фичей: {cfg.features.base}")
+    
+    try:
+        dataset = load_data(cfg, project_root)
+        print("\n данные успешно загружены!")
+        print(f"  x_train shape: {dataset.x_train.shape}")
+        print(f"  x_test shape:  {dataset.x_test.shape}")
+        print(f"    y_train shape: {dataset.y_train.shape}")
+    except Exception as e:
+        print(f"\n ошибка при загрузке данных: {e}")
+        raise
 
 if __name__ == "__main__":
     main()
