@@ -1,0 +1,13 @@
+features:
+  base:
+    numeric:
+      - Age
+      - Fare
+      - FamilySize 
+    categorical:
+      - Sex
+      - Embarked
+      - Title 
+    ordinal:
+      - Pclass
+    

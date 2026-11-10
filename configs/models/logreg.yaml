@@ -1,6 +1,0 @@
-model:
-  name: logistic_regression
-  solver: lbfgs
-  C: 0.5
-  l1_ratio: 0.0
-  max_iter: 500
