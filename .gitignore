@@ -43,3 +43,7 @@ artifacts/
 # Generated reports
 notebooks/*.html
 mlartifacts/
+mlflow.db
+outputs/
+vadim/
+notebooks/*.html

@@ -1,0 +1,6 @@
+
+name: LogisticRegression
+C: 1.0
+max_iter: 1000
+solver : lbfgs
+

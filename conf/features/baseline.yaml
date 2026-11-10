@@ -1,12 +1,12 @@
-features:
-  base:
-    numeric:
-      - Age
-      - SibSp
-      - Parch
-      - Fare
-    categorical:
-      - Sex
-      - Embarked
-    ordinal:
-      - Pclass
+
+base:
+  numeric:
+    - Age
+    - SibSp
+    - Parch
+    - Fare
+  categorical:
+    - Sex
+    - Embarked
+  ordinal:
+    - Pclass
