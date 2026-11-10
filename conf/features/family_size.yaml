@@ -1,0 +1,11 @@
+features:
+  base:
+    numeric:
+      - Age
+      - Fare
+      - FamilySize  # Новая фича
+    categorical:
+      - Sex
+      - Embarked
+    ordinal:
+      - Pclass

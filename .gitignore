@@ -39,3 +39,7 @@ mlruns/
 outputs/
 artifacts/
 *.log
+
+# Generated reports
+notebooks/*.html
+mlartifacts/
