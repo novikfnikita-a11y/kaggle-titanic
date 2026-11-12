@@ -10,7 +10,7 @@ defaults:
 mlflow:
   experiment_name: "titanic-baseline"
   tracking_uri: "http://127.0.0.1:5000"
-  run_name: "${now:%Y-%m-%d_%H-%M-%S}_${model._target_}"
+  run_name: "${model.name}"
 
 seed: 42
 
@@ -27,7 +27,6 @@ cv:
   random_state: ${seed}
 
 output:
-  dir: ${hydra.run.dir}/artifacts
   save_model: true
   save_oof: true
   save_feature_importance: true
@@ -41,5 +40,4 @@ hydra:
     dir: outputs/${mlflow.experiment_name}/${now:%Y-%m-%d_%H-%M-%S}
   job:
     chdir: false
-  output:
-    dir: ${hydra.run.dir}
+  
