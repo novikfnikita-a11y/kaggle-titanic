@@ -1,0 +1,38 @@
+# @package features.basic
+#   python train.py features.basic.raw.numeric.Fare.enabled=false
+
+raw:
+  numeric:
+    Age:
+      enabled: true
+      impute:
+        strategy: median
+      scale: standard
+      missing_indicator: true
+    Fare:
+      enabled: true
+      impute:
+        strategy: median
+      scale: standard
+      log1p: true
+    SibSp:
+      enabled: true
+    Parch:
+      enabled: true
+
+  categorical:
+    Sex:
+      enabled: true
+      encode: onehot
+    Embarked:
+      enabled: true
+      impute:
+        strategy: mode
+      encode: onehot
+    # Pclass по умолчанию onehot. Для ablation:
+    #   features.basic.raw.categorical.Pclass.encode=ordinal
+    #   features.basic.raw.categorical.Pclass.order="[3,2,1]"
+    Pclass:
+      enabled: true
+      encode: onehot
+      order: [3, 2, 1]

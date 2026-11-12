@@ -1,0 +1,13 @@
+# @package features.family
+
+# вкл - python train.py features@features.family=family
+
+derived:
+  FamilySize:
+    enabled: true
+    sources: [SibSp, Parch]
+    op: sum_plus_one
+  IsAlone:
+    enabled: true
+    sources: [SibSp, Parch]
+    op: eq_zero
