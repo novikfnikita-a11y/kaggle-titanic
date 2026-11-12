@@ -47,7 +47,7 @@ def main(cfg: DictConfig) -> None:
     
         print(f"\n модель: {cfg.model.name}")
         print(f"  гиперпараметры : {cfg.model}")
-        print(f" набор фичей: {cfg.features.base}")
+        print(f" набор фичей: {cfg.features.basic}")
     
     
     

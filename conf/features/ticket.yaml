@@ -1,0 +1,18 @@
+# @package features.ticket
+# фичи из Ticket , Fare. 
+# python train.py features@features.ticket=ticket
+
+derived:
+  TicketPrefix:
+    enabled: true
+    source: Ticket
+    extract: prefix    # "PC", "STON", "A/5" ,, "NONE" 
+    encode: onehot
+  FarePerPerson:
+    enabled: true
+    sources: [Fare, SibSp, Parch]
+    op: fare_per_family_size
+    impute:
+      strategy: median
+    scale: standard
+    log1p: true

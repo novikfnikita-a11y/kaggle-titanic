@@ -1,0 +1,25 @@
+# @package features.identity
+# Title фича из имени 
+# python train.py features@features.identity=identity
+
+derived:
+  Title:
+    enabled: true
+    source: Name
+    extract: title
+    mapping:           
+      Mlle: Miss
+      Ms: Miss
+      Mme: Mrs
+      Lady: Rare
+      Countess: Rare
+      Capt: Rare
+      Col: Rare
+      Don: Rare
+      Dr: Rare
+      Major: Rare
+      Rev: Rare
+      Sir: Rare
+      Jonkheer: Rare
+      Dona: Rare
+    encode: onehot
