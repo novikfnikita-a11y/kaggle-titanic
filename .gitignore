@@ -45,5 +45,6 @@ notebooks/*.html
 mlartifacts/
 mlflow.db
 outputs/
+submissions/
 vadim/
 notebooks/*.html

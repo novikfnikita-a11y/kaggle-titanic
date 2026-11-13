@@ -1,5 +1,7 @@
-_target_: sklearn.ensemble.RandomForestClassifier
 name: RandomForestClassifier
-n_estimators : 100 
-max_depth: 10 
-random_state: ${seed}
+
+estimator:
+  _target_: sklearn.ensemble.RandomForestClassifier
+  n_estimators: 100
+  max_depth: 10
+  random_state: ${seed}

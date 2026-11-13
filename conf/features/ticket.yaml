@@ -5,13 +5,15 @@
 derived:
   TicketPrefix:
     enabled: true
-    source: Ticket
-    extract: prefix    # "PC", "STON", "A/5" ,, "NONE" 
+    type: categorical
+    inputs: Ticket
+    op: ticket_prefix
     encode: onehot
   FarePerPerson:
     enabled: true
-    sources: [Fare, SibSp, Parch]
-    op: fare_per_family_size
+    type: numeric
+    inputs: [Fare, SibSp, Parch]
+    op: fare_per_person
     impute:
       strategy: median
     scale: standard
