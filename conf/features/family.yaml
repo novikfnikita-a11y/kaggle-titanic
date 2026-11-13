@@ -5,9 +5,11 @@
 derived:
   FamilySize:
     enabled: true
-    sources: [SibSp, Parch]
-    op: sum_plus_one
+    type: numeric
+    inputs: [SibSp, Parch]
+    op: family_size
   IsAlone:
     enabled: true
-    sources: [SibSp, Parch]
-    op: eq_zero
+    type: numeric
+    inputs: [SibSp, Parch]
+    op: is_alone

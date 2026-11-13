@@ -9,11 +9,17 @@ from omegaconf import DictConfig, OmegaConf
 
 from src.kaggle_titanic.data import load_data
 from src.kaggle_titanic.features import build_feature_pipeline
+from src.kaggle_titanic.training import train_model
 from src.kaggle_titanic.tracking import (
     log_config,
     log_params,
     log_tags,
     log_selected_features,
+    log_metrics,
+    log_fold_metrics,
+    log_predictions,
+    log_model,
+    register_model,
 )
 
 warnings.filterwarnings(
@@ -25,7 +31,6 @@ warnings.filterwarnings(
     "ignore",
     message=".*Implicit conversion from Version to str.*",
 )
-
 
 
 @hydra.main(
@@ -98,6 +103,45 @@ def main(cfg: DictConfig) -> None:
                 print(f"  {step_name}: {step.__class__.__name__}")
 
             print("\n cv continued xd.")
+            result = train_model(
+            pipeline=pipeline,
+                dataset=dataset,
+                cv_config=cfg.cv,
+                id_column=cfg.data.id_column,
+            )
+
+            log_metrics(result.metrics)
+            log_fold_metrics(result.fold_metrics)
+            log_predictions(result.test_predictions)
+
+            model_uri = log_model(
+                result.fitted_pipeline,
+                X_train_sample=dataset.x_train.head(5),
+            )
+
+            if cfg.mlflow.register_model:
+                acc = result.metrics["cv_accuracy_mean"]
+                model_registry_name = f"titanic-{cfg.model.name.lower()}"
+
+                active_groups = [
+                    g for g in cfg.features.column_order
+                    if g in cfg.features and cfg.features[g] is not None
+                ]
+                description = (
+                    f"model={cfg.model.name} | "
+                    f"features={','.join(active_groups)} | "
+                    f"seed={cfg.seed} | cv={cfg.cv.n_splits}fold"
+                )
+                register_model(
+                    model_uri=model_uri,
+                    name=model_registry_name,
+                    tags={"cv_accuracy_mean": str(acc)},
+                    description=description,
+                    min_accuracy=cfg.mlflow.register_if_better_than,
+                    promote_to_production=True,
+                )
+
+           
 
         except Exception as e:
             print(f"experiment failed: {e}")

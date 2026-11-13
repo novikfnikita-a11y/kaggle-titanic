@@ -11,6 +11,8 @@ mlflow:
   experiment_name: "titanic-baseline"
   tracking_uri: "http://127.0.0.1:5000"
   run_name: "${model.name}"
+  register_model: false
+  register_if_better_than: null
 
 seed: 42
 

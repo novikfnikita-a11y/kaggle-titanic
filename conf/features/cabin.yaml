@@ -5,13 +5,15 @@
 derived:
   HasCabin:
     enabled: true
-    source: Cabin
+    type: numeric
+    inputs: Cabin
     op: not_null
   Deck:
     enabled: true
-    source: Cabin
-    extract: first_char
+    type: categorical
+    inputs: Cabin
+    op: first_char
     impute:
       strategy: constant
-      value: "U"       # u = unknown 
+      value: "U"
     encode: onehot

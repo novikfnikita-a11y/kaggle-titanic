@@ -5,21 +5,23 @@
 derived:
   Title:
     enabled: true
-    source: Name
-    extract: title
-    mapping:           
-      Mlle: Miss
-      Ms: Miss
-      Mme: Mrs
-      Lady: Rare
-      Countess: Rare
-      Capt: Rare
-      Col: Rare
-      Don: Rare
-      Dr: Rare
-      Major: Rare
-      Rev: Rare
-      Sir: Rare
-      Jonkheer: Rare
-      Dona: Rare
+    type: categorical
+    inputs: Name
+    op: extract_title
+    params:
+      mapping:
+        Mlle: Miss
+        Ms: Miss
+        Mme: Mrs
+        Lady: Rare
+        Countess: Rare
+        Capt: Rare
+        Col: Rare
+        Don: Rare
+        Dr: Rare
+        Major: Rare
+        Rev: Rare
+        Sir: Rare
+        Jonkheer: Rare
+        Dona: Rare
     encode: onehot
