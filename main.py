@@ -1,6 +1,5 @@
-
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 import hydra
 import mlflow
@@ -8,29 +7,24 @@ from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 
 from src.kaggle_titanic.data import load_data
-from src.kaggle_titanic.features import build_feature_pipeline
-from src.kaggle_titanic.training import train_model
+from src.kaggle_titanic.pipeline import build_pipeline, resolve_feature_columns
 from src.kaggle_titanic.tracking import (
+    config_fingerprint,
     log_config,
-    log_params,
-    log_tags,
-    log_selected_features,
-    log_metrics,
     log_fold_metrics,
-    log_predictions,
+    log_metrics,
     log_model,
+    log_params,
+    log_predictions,
+    log_selected_features,
+    log_submission,
+    log_tags,
     register_model,
 )
+from src.kaggle_titanic.training import train_model
 
-warnings.filterwarnings(
-    "ignore",
-    message=".*register_new_resolver.*",
-)
-
-warnings.filterwarnings(
-    "ignore",
-    message=".*Implicit conversion from Version to str.*",
-)
+warnings.filterwarnings("ignore", message=".*register_new_resolver.*")
+warnings.filterwarnings("ignore", message=".*Implicit conversion from Version to str.*")
 
 
 @hydra.main(
@@ -45,107 +39,90 @@ def main(cfg: DictConfig) -> None:
     mlflow.set_tracking_uri(cfg.mlflow.tracking_uri)
     mlflow.set_experiment(cfg.mlflow.experiment_name)
 
-    run_name = str(cfg.mlflow.run_name)
+    fingerprint = config_fingerprint(cfg)
+    run_name = (
+        cfg.mlflow.get("run_name")
+        or f"{cfg.model.name}_{cfg.feature_set.name}_{fingerprint}"
+    )
 
     with mlflow.start_run(run_name=run_name):
 
-        print(f"начало рана: {run_name}")
-
         log_config(cfg)
         log_params(cfg)
-        log_tags(cfg)
+        log_tags(cfg, fingerprint)
 
-        print(f"\n модель: {cfg.model.name}")
+        dataset = load_data(config=cfg, project_root=project_root)
+
+        print(f"\nmodel: {cfg.model.name}")
         print(f"estimator config:\n{OmegaConf.to_yaml(cfg.model.estimator)}")
+        print(f"feature set:\n{OmegaConf.to_yaml(cfg.feature_set)}")
+        print(f"X_train shape: {dataset.x_train.shape}")
+        print(f"y_train shape: {dataset.y_train.shape}")
 
-        print(
-            "\nfeature cfg:\n"
-            f"{OmegaConf.to_yaml(cfg.features)}"
+        estimator = instantiate(cfg.model.estimator)
+
+        imputer_cfg = cfg.imputation.get("imputer")
+        imputer = instantiate(imputer_cfg) if imputer_cfg else None
+        encoders = [instantiate(encoder) for encoder in cfg.encoding.encoders]
+
+        numeric, categorical, ordinal = resolve_feature_columns(
+            cfg.groups, cfg.feature_set
         )
 
-        # data load
+        cat_arg = cfg.model.get("cat_feature_arg")
+        if cat_arg:
+            estimator.set_params(**{cat_arg: list(categorical) + list(ordinal)})
 
-        try:
-            dataset = load_data(
-                config=cfg,
-                project_root=project_root,
-            )
+        pipeline = build_pipeline(
+            numeric=numeric,
+            categorical=categorical,
+            ordinal=ordinal,
+            estimator=estimator,
+            imputer=imputer,
+            encoders=encoders,
+            scale=cfg.feature_set.scale,
+            native_categorical=cfg.preprocessing.get("native_categorical", False),
+        )
 
-            print("\n данные на месте")
-            print(f"X_train shape: {dataset.x_train.shape}")
-            print(f"X_test shape:  {dataset.x_test.shape}")
-            print(f"y_train shape: {dataset.y_train.shape}")
+        selected_features = numeric + categorical + list(ordinal)
+        log_selected_features(selected_features)
 
-            estimator = instantiate(cfg.model.estimator)
+        print(f"\nselected features ({len(selected_features)}):")
+        for feature in selected_features:
+            print(f"   {feature}")
 
-            pipeline = build_feature_pipeline(
-                features_config=cfg.features,
-                estimator=estimator,
-            )
+        print("\npipeline steps:")
+        for step_name, step in pipeline.steps:
+            print(f"  {step_name}: {step.__class__.__name__}")
 
-            print("\nfeature pipeline done")
-
-            feature_generator = pipeline.named_steps["feature_generator"]
-
-            selected_features = [
-                spec.name
-                for spec in feature_generator.feature_specs
-            ]
-
-            log_selected_features(selected_features)
-
-            print(f"selected features ({len(selected_features)}):")
-            for feature in selected_features:
-                print(f"   {feature}")
-
-            print("\n structure:")
-            for step_name, step in pipeline.steps:
-                print(f"  {step_name}: {step.__class__.__name__}")
-
-            print("\n cv continued xd.")
-            result = train_model(
+        result = train_model(
             pipeline=pipeline,
-                dataset=dataset,
-                cv_config=cfg.cv,
-                id_column=cfg.data.id_column,
-            )
+            dataset=dataset,
+            cv_config=cfg.cv,
+            id_column=cfg.data.id_column,
+        )
 
-            log_metrics(result.metrics)
-            log_fold_metrics(result.fold_metrics)
-            log_predictions(result.test_predictions)
+        log_metrics(result.metrics)
+        log_fold_metrics(result.fold_metrics)
+        log_predictions(result.test_predictions)
+        log_submission(result.test_predictions)
 
-            model_uri = log_model(
-                result.fitted_pipeline,
-                X_train_sample=dataset.x_train.head(5),
-            )
+        model_uri = log_model(
+            result.model,
+            X_train_sample=dataset.x_train.head(5),
+        )
 
-            if cfg.mlflow.register_model:
-                acc = result.metrics["cv_accuracy_mean"]
-                model_registry_name = f"titanic-{cfg.model.name.lower()}"
-
-                active_groups = [
-                    g for g in cfg.features.column_order
-                    if g in cfg.features and cfg.features[g] is not None
-                ]
-                description = (
-                    f"model={cfg.model.name} | "
-                    f"features={','.join(active_groups)} | "
+        if cfg.mlflow.register_model:
+            register_model(
+                model_uri=model_uri,
+                name=f"titanic-{cfg.model.name.lower()}",
+                tags={"cv_accuracy_mean": str(result.metrics["cv_accuracy_mean"])},
+                description=(
+                    f"model={cfg.model.name} | feature_set={cfg.feature_set.name} | "
                     f"seed={cfg.seed} | cv={cfg.cv.n_splits}fold"
-                )
-                register_model(
-                    model_uri=model_uri,
-                    name=model_registry_name,
-                    tags={"cv_accuracy_mean": str(acc)},
-                    description=description,
-                    min_accuracy=cfg.mlflow.register_if_better_than,
-                    promote_to_production=True,
-                )
-
-           
-
-        except Exception as e:
-            print(f"experiment failed: {e}")
-            raise
+                ),
+                min_accuracy=cfg.mlflow.register_if_better_than,
+            )
 
 
 if __name__ == "__main__":

@@ -1,17 +1,17 @@
-"""Model training and cross-validation."""
-
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
-
+from omegaconf import DictConfig
 from sklearn.base import clone
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.pipeline import Pipeline
 
-from omegaconf import DictConfig
-
 from .data import DatasetBundle
+from .ensemble import FoldEnsemble
+
+AGGREGATIONS = ("fold_ensemble", "full_fit")
 
 
 @dataclass
@@ -19,7 +19,23 @@ class TrainingResult:
     metrics: dict[str, float]
     fold_metrics: pd.DataFrame
     test_predictions: pd.DataFrame
-    fitted_pipeline: Pipeline
+    model: Any
+
+
+def _build_model(
+    aggregate: str,
+    pipeline: Pipeline,
+    fold_estimators: list[Pipeline] | None,
+    X: pd.DataFrame,
+    y: pd.Series,
+) -> Any:
+    if aggregate == "fold_ensemble":
+        return FoldEnsemble(estimators=fold_estimators)
+
+    if aggregate == "full_fit":
+        return clone(pipeline).fit(X, y)
+
+    raise ValueError(f"Unsupported aggregate: {aggregate}")
 
 
 def train_model(
@@ -38,6 +54,10 @@ def train_model(
             f"Unsupported CV splitter: {cv_config.splitter}"
         )
 
+    aggregate = cv_config.get("aggregate", "fold_ensemble")
+    if aggregate not in AGGREGATIONS:
+        raise ValueError(f"Unsupported aggregate: {aggregate}")
+
     splitter = StratifiedKFold(
         n_splits=cv_config.n_splits,
         shuffle=cv_config.shuffle,
@@ -48,7 +68,7 @@ def train_model(
         ),
     )
 
-    print("\n cv started")
+    print(f"\n cv started (aggregate={aggregate})")
 
     cv_results = cross_validate(
         pipeline,
@@ -56,7 +76,7 @@ def train_model(
         y,
         cv=splitter,
         scoring="accuracy",
-        return_estimator=True,
+        return_estimator=aggregate == "fold_ensemble",
         error_score="raise",
     )
 
@@ -82,13 +102,14 @@ def train_model(
         "cv_accuracy_std": cv_accuracy_std,
     }
 
-    print("\n fitting final model on full train data")
+    print(f"\n building final model ({aggregate})")
 
-    fitted_pipeline = clone(pipeline)
+    fold_estimators = (
+        list(cv_results["estimator"]) if aggregate == "fold_ensemble" else None
+    )
+    model = _build_model(aggregate, pipeline, fold_estimators, X, y)
 
-    fitted_pipeline.fit(X, y)
-
-    test_predictions_array = fitted_pipeline.predict(X_test)
+    test_predictions_array = model.predict(X_test)
 
     test_predictions_df = pd.DataFrame({
         id_column: dataset.test_ids.to_numpy(),
@@ -103,5 +124,5 @@ def train_model(
         metrics=metrics,
         fold_metrics=fold_metrics_df,
         test_predictions=test_predictions_df,
-        fitted_pipeline=fitted_pipeline,
+        model=model,
     )

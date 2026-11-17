@@ -1,40 +1,36 @@
-# Kaggle Titanic — reproducible ML workflow
+Reproducible Kaggle Titanic pipeline: scikit-learn Pipeline (features -> encode -> impute -> prep -> clf), Hydra config groups, MLflow tracking. Python 3.12, managed with uv.
 
-A small project for developing a reproducible scikit-learn workflow with
-OmegaConf configuration and MLflow experiment tracking.
-
-## Environment
+To run it, install the dependencies, place the competition files at data/raw/train.csv and data/raw/test.csv (Survived is the target, PassengerId the id column), and start the MLflow UI that conf/config.yaml points at (http://127.0.0.1:5000). Training logs through it, so it must already be running; mlflow ui serves that address backed by sqlite:///mlflow.db with artifacts under ./mlartifacts:
 
 ```bash
 uv sync
+uv run mlflow ui
 ```
 
-## CLI
-
-Run from any working directory:
+Training runs main.py through Hydra. It composes conf/config.yaml (defaults: logreg, baseline feature_set, age_group_median imputation, frequency encoding, onehot preprocessing), builds the pipeline, runs 5-fold StratifiedKFold cross-validation, predicts the test set, and logs everything to the active MLflow run: the resolved config, flat params, tags (model, seed, cv, feature_set, config_hash), selected features, per-fold metrics, test predictions, the byte-for-byte submission CSV, and the fitted model. Feature engineering and the fitted transformers live inside the pipeline, so they are refit on each fold's train split and never leak. Any config group can be overridden on the command line, and -m sweeps combinations:
 
 ```bash
-uv run --project /path/to/kaggle-titanic kaggle-titanic --help
-uv run --project /path/to/kaggle-titanic kaggle-titanic
+uv run python main.py
+uv run python main.py model=rf feature_set=best
+uv run python main.py feature_set.use=[base,family,cabin]
+uv run python main.py imputation=none encoding=none
+uv run python main.py -m feature_set=baseline,best model=logreg,rf
 ```
 
-Or from the project root:
+Runs are keyed by run_id; the auto run name is {model}_{feature_set}_{config_hash}, where config_hash is a short sha256 of the resolved config without the hydra, mlflow and cli blocks, so an identical hash means an identical experiment. The final model is the fold ensemble by default (soft vote over the five fold models); cv.aggregate=full_fit refits a single model on all data instead.
+
+To produce a Kaggle submission, point submit.py at a run or a registered model (models:/titanic-<model>/champion). It loads the model, feeds the raw test rows through the pipeline, and writes data/submissions/{model}_{feature_set}_cv{...}_{run_id}.csv with columns [PassengerId, Survived]:
 
 ```bash
-uv run kaggle-titanic
+uv run python submit.py cli.run_id=<RUN_ID>
+uv run python submit.py cli.model_uri=models:/titanic-logisticregression/champion
+uv run python submit.py cli.run_id=<RUN_ID> cli.output_path=my_sub.csv
 ```
 
-The CLI currently resolves the OmegaConf configuration, loads the Kaggle
-train/test files, validates their schemas, and keeps `PassengerId` separate
-from model features. Training, cross-validation, MLflow logging, and submission
-generation are the next implementation steps.
+After uploading to Kaggle, record the public leaderboard score back into the run:
 
-## Configuration
+```bash
+uv run python record_lb.py cli.run_id=<RUN_ID> cli.score=0.78472
+```
 
-- `configs/base.yaml`: seed, data paths, CV settings, and feature experiments.
-- `configs/models/logreg.yaml`: LogisticRegression settings.
-
-## Data
-
-Place the competition files in `data/raw/`. The data directory is intentionally
-git-ignored; do not commit competition data.
+Feature groups are declared once in conf/features.yaml and selected by name from conf/feature_set/*.yaml; models, imputation, encoding and native-vs-onehot categorical handling live in conf/model/*.yaml, conf/imputation/*.yaml, conf/encoding/*.yaml and conf/preprocessing/*.yaml. data/, outputs/, mlartifacts/ and mlflow.db are gitignored.

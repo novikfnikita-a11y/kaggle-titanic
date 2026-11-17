@@ -1,20 +1,27 @@
 defaults:
+  - features
   - model: logreg
-  - features@features.basic: basic          
-  - features@features.family: null          
-  - features@features.cabin: null
-  - features@features.identity: null
-  - features@features.ticket: null
+  - feature_set: baseline
+  - imputation: age_group_median
+  - encoding: frequency
+  - preprocessing: onehot
   - _self_
 
 mlflow:
   experiment_name: "titanic-baseline"
   tracking_uri: "http://127.0.0.1:5000"
-  run_name: "${model.name}"
+  run_name: null
   register_model: false
   register_if_better_than: null
 
 seed: 42
+
+cli:
+  model_uri: null
+  run_id: null
+  output_path: null
+  score: null
+  source: public
 
 data:
   train_path: data/raw/train.csv
@@ -27,19 +34,10 @@ cv:
   n_splits: 5
   shuffle: true
   random_state: ${seed}
-
-output:
-  save_model: true
-  save_oof: true
-  save_feature_importance: true
-
-# понял что для билдера лучше ордер вынести
-features:
-  column_order: ["basic", "family", "cabin", "identity", "ticket"]
+  aggregate: fold_ensemble
 
 hydra:
   run:
     dir: outputs/${mlflow.experiment_name}/${now:%Y-%m-%d_%H-%M-%S}
   job:
     chdir: false
-  

@@ -1,0 +1,18 @@
+name: CatBoost
+
+cat_feature_arg: cat_features
+
+estimator:
+  _target_: kaggle_titanic.models.CatBoostNative
+  cat_features: []
+  params:
+    iterations: 600
+    depth: 4
+    learning_rate: 0.03
+    l2_leaf_reg: 6.0
+    random_strength: 1.0
+    bagging_temperature: 0.5
+    loss_function: Logloss
+    eval_metric: Accuracy
+    random_seed: ${seed}
+    verbose: false

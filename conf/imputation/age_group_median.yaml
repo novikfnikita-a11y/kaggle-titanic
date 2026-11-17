@@ -1,0 +1,6 @@
+imputer:
+  _target_: kaggle_titanic.transformers.GroupMedianImputer
+  column: Age
+  group_by:
+    - Title
+    - Pclass
