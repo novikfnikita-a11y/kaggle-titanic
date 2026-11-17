@@ -1,0 +1,10 @@
+encoders:
+  - _target_: kaggle_titanic.transformers.FrequencyEncoder
+    column: Ticket
+    output_column: TicketFreq
+  - _target_: kaggle_titanic.transformers.FrequencyEncoder
+    column: Cabin
+    output_column: CabinFreq
+  - _target_: kaggle_titanic.transformers.FrequencyEncoder
+    column: Surname
+    output_column: SurnameFreq

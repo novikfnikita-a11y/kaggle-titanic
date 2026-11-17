@@ -1,0 +1,49 @@
+groups:
+  base:
+    numeric:
+      - Age
+      - Age_missing
+      - Fare_log
+      - SibSp
+      - Parch
+    ordinal:
+      Pclass: [1, 2, 3]
+    categorical:
+      - Sex
+      - Embarked
+
+  family:
+    numeric:
+      - FamilySize
+      - IsAlone
+
+  cabin:
+    numeric:
+      - HasCabin
+    categorical:
+      - Deck
+
+  ticket:
+    numeric:
+      - FarePerPerson
+    categorical:
+      - TicketPrefix
+
+  identity:
+    categorical:
+      - Title
+
+  bins:
+    ordinal:
+      AgeBin: [child, teen, young, adult, middle, senior]
+      FareBin: [low, mid, high, top]
+
+  interactions:
+    categorical:
+      - SexPclass
+
+  frequency:
+    numeric:
+      - TicketFreq
+      - CabinFreq
+      - SurnameFreq

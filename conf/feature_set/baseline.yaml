@@ -1,0 +1,9 @@
+name: baseline
+scale: true
+exclude: []
+use:
+  - base
+  - family
+  - cabin
+  - ticket
+  - identity

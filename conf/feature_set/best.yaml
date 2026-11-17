@@ -1,0 +1,12 @@
+name: best
+scale: true
+exclude:
+  - Age_missing
+use:
+  - base
+  - family
+  - cabin
+  - ticket
+  - identity
+  - bins
+  - frequency

@@ -1,0 +1,17 @@
+name: LightGBM
+
+cat_feature_arg: categorical_feature
+
+estimator:
+  _target_: lightgbm.LGBMClassifier
+  n_estimators: 500
+  num_leaves: 15
+  max_depth: 4
+  learning_rate: 0.03
+  min_child_samples: 20
+  reg_lambda: 1.0
+  subsample: 0.9
+  subsample_freq: 1
+  colsample_bytree: 0.9
+  random_state: ${seed}
+  verbose: -1
