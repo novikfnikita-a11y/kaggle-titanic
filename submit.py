@@ -8,8 +8,8 @@ import pandas as pd
 from mlflow.tracking import MlflowClient
 from omegaconf import DictConfig
 
-from src.kaggle_titanic.data import load_data
-from src.kaggle_titanic.tracking import connect
+from kaggle_titanic.data import load_data
+from kaggle_titanic.tracking import connect
 
 
 def _resolve_model_uri(raw_uri: str, client: MlflowClient) -> str:

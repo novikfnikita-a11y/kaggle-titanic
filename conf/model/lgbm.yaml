@@ -1,7 +1,5 @@
 name: LightGBM
 
-cat_feature_arg: categorical_feature
-
 estimator:
   _target_: lightgbm.LGBMClassifier
   n_estimators: 500

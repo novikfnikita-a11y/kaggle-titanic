@@ -5,9 +5,9 @@ import hydra
 import mlflow
 from omegaconf import DictConfig, OmegaConf
 
-from src.kaggle_titanic.data import load_data
-from src.kaggle_titanic.pipeline import build_from_config
-from src.kaggle_titanic.tracking import (
+from kaggle_titanic.data import load_data
+from kaggle_titanic.pipeline import build_from_config
+from kaggle_titanic.tracking import (
     config_fingerprint,
     connect,
     cv_label,
@@ -16,13 +16,12 @@ from src.kaggle_titanic.tracking import (
     log_metrics,
     log_model,
     log_params,
-    log_predictions,
     log_selected_features,
     log_submission,
     log_tags,
     register_model,
 )
-from src.kaggle_titanic.training import train_model
+from kaggle_titanic.training import train_model
 
 warnings.filterwarnings("ignore", message=".*register_new_resolver.*")
 warnings.filterwarnings("ignore", message=".*Implicit conversion from Version to str.*")
@@ -84,7 +83,6 @@ def main(cfg: DictConfig) -> None:
 
         log_metrics(result.metrics)
         log_fold_metrics(result.fold_metrics)
-        log_predictions(result.test_predictions)
         log_submission(result.test_predictions)
 
         model_uri = log_model(

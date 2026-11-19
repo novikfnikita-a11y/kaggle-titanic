@@ -7,9 +7,9 @@ import pandas as pd
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 
-from src.kaggle_titanic.data import load_data
-from src.kaggle_titanic.pipeline import build_from_config
-from src.kaggle_titanic.tracking import (
+from kaggle_titanic.data import load_data
+from kaggle_titanic.pipeline import build_from_config
+from kaggle_titanic.tracking import (
     config_fingerprint,
     connect,
     log_config,

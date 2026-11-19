@@ -95,10 +95,6 @@ def log_fold_metrics(fold_metrics: pd.DataFrame) -> None:
     _log_csv(fold_metrics, "metrics/fold_metrics.csv")
 
 
-def log_predictions(predictions: pd.DataFrame) -> None:
-    _log_csv(predictions, "predictions/test_predictions.csv")
-
-
 def log_submission(predictions: pd.DataFrame) -> None:
     _log_csv(predictions, "submission/submission.csv")
 

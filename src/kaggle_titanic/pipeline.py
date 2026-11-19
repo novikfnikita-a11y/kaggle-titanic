@@ -71,15 +71,15 @@ def build_pipeline(
             ("encode", Pipeline([(f"enc{i}", e) for i, e in enumerate(encoders)]))
         )
 
+    if imputer is not None:
+        steps.append(("impute", imputer))
+
     if native_categorical:
         cat_columns = categorical_columns(categorical, ordinal)
         steps.append(("select", SelectColumns(numeric, cat_columns)))
         if estimator is not None:
             steps.append(("clf", estimator))
         return Pipeline(steps=steps)
-
-    if imputer is not None:
-        steps.append(("impute", imputer))
 
     transformers = []
     if numeric:
@@ -143,6 +143,10 @@ def build_from_config(cfg: DictConfig) -> tuple[Pipeline, list[str]]:
     if cat_arg:
         estimator.set_params(**{cat_arg: tuple(cat_columns)})
 
+    native_categorical = (
+        cfg.preprocessing.get("native_categorical", False) or bool(cat_arg)
+    )
+
     pipeline = build_pipeline(
         numeric=numeric,
         categorical=categorical,
@@ -151,7 +155,7 @@ def build_from_config(cfg: DictConfig) -> tuple[Pipeline, list[str]]:
         imputer=imputer,
         encoders=encoders,
         scale=cfg.feature_set.scale,
-        native_categorical=cfg.preprocessing.get("native_categorical", False),
+        native_categorical=native_categorical,
     )
 
     return pipeline, numeric + cat_columns

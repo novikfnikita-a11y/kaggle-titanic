@@ -1,7 +1,7 @@
 import hydra
 from omegaconf import DictConfig
 
-from src.kaggle_titanic.tracking import connect
+from kaggle_titanic.tracking import connect
 
 
 @hydra.main(
