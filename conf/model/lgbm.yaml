@@ -1,7 +1,5 @@
 name: LightGBM
 
-cat_feature_arg: categorical_feature
-
 estimator:
   _target_: lightgbm.LGBMClassifier
   n_estimators: 500
@@ -15,3 +13,7 @@ estimator:
   colsample_bytree: 0.9
   random_state: ${seed}
   verbose: -1
+
+search:
+  clf__num_leaves: [15, 31]
+  clf__learning_rate: [0.03, 0.06]

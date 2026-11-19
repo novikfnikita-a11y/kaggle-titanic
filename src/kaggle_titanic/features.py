@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, TransformerMixin
 
 TITLE_MAP = {
     "Mlle": "Miss",
@@ -70,11 +69,3 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     df["SexPclass"] = df.Sex + "_" + df.Pclass.astype(str)
 
     return df
-
-
-class FeatureEngineer(BaseEstimator, TransformerMixin):
-    def fit(self, X: pd.DataFrame, y=None) -> "FeatureEngineer":
-        return self
-
-    def transform(self, X: pd.DataFrame, y=None) -> pd.DataFrame:
-        return add_features(X)

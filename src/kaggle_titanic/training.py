@@ -1,17 +1,32 @@
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
 import pandas as pd
+from hydra.utils import instantiate
 from omegaconf import DictConfig
-from sklearn.base import clone
-from sklearn.model_selection import StratifiedKFold, cross_validate
+from sklearn.base import BaseEstimator, ClassifierMixin, clone
+from sklearn.model_selection import cross_validate
 from sklearn.pipeline import Pipeline
 
 from .data import DatasetBundle
-from .ensemble import FoldEnsemble
 
-AGGREGATIONS = ("fold_ensemble", "full_fit")
+
+class FoldEnsemble(BaseEstimator, ClassifierMixin):
+    def __init__(self, estimators: Sequence[Any] = ()):
+        self.estimators = estimators
+
+    def fit(self, X=None, y=None) -> "FoldEnsemble":
+        return self
+
+    def predict_proba(self, X):
+        return np.mean(
+            [estimator.predict_proba(X) for estimator in self.estimators],
+            axis=0,
+        )
+
+    def predict(self, X):
+        return (self.predict_proba(X)[:, 1] >= 0.5).astype(int)
 
 
 @dataclass
@@ -23,19 +38,15 @@ class TrainingResult:
 
 
 def _build_model(
-    aggregate: str,
+    ensemble: bool,
     pipeline: Pipeline,
     fold_estimators: list[Pipeline] | None,
     X: pd.DataFrame,
     y: pd.Series,
 ) -> Any:
-    if aggregate == "fold_ensemble":
+    if ensemble:
         return FoldEnsemble(estimators=fold_estimators)
-
-    if aggregate == "full_fit":
-        return clone(pipeline).fit(X, y)
-
-    raise ValueError(f"Unsupported aggregate: {aggregate}")
+    return clone(pipeline).fit(X, y)
 
 
 def train_model(
@@ -49,26 +60,11 @@ def train_model(
     y = dataset.y_train
     X_test = dataset.x_test
 
-    if cv_config.splitter != "stratified_kfold":
-        raise ValueError(
-            f"Unsupported CV splitter: {cv_config.splitter}"
-        )
+    ensemble = cv_config.get("ensemble", True)
 
-    aggregate = cv_config.get("aggregate", "fold_ensemble")
-    if aggregate not in AGGREGATIONS:
-        raise ValueError(f"Unsupported aggregate: {aggregate}")
+    splitter = instantiate(cv_config.splitter)
 
-    splitter = StratifiedKFold(
-        n_splits=cv_config.n_splits,
-        shuffle=cv_config.shuffle,
-        random_state=(
-            cv_config.random_state
-            if cv_config.shuffle
-            else None
-        ),
-    )
-
-    print(f"\n cv started (aggregate={aggregate})")
+    print(f"\n cv started (ensemble={ensemble})")
 
     cv_results = cross_validate(
         pipeline,
@@ -76,7 +72,7 @@ def train_model(
         y,
         cv=splitter,
         scoring="accuracy",
-        return_estimator=aggregate == "fold_ensemble",
+        return_estimator=ensemble,
         error_score="raise",
     )
 
@@ -102,12 +98,10 @@ def train_model(
         "cv_accuracy_std": cv_accuracy_std,
     }
 
-    print(f"\n building final model ({aggregate})")
+    print(f"\n building final model (ensemble={ensemble})")
 
-    fold_estimators = (
-        list(cv_results["estimator"]) if aggregate == "fold_ensemble" else None
-    )
-    model = _build_model(aggregate, pipeline, fold_estimators, X, y)
+    fold_estimators = list(cv_results["estimator"]) if ensemble else None
+    model = _build_model(ensemble, pipeline, fold_estimators, X, y)
 
     test_predictions_array = model.predict(X_test)
 

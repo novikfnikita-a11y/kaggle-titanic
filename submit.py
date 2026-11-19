@@ -8,10 +8,11 @@ import pandas as pd
 from mlflow.tracking import MlflowClient
 from omegaconf import DictConfig
 
-from src.kaggle_titanic.data import load_data
+from kaggle_titanic.data import load_data
+from kaggle_titanic.tracking import connect
 
 
-def _resolve_model_uri(raw_uri: str, tracking_uri: str) -> str:
+def _resolve_model_uri(raw_uri: str, client: MlflowClient) -> str:
     m = re.match(r"^models:/([^/]+)/(.+)$", raw_uri)
     if not m:
         return raw_uri
@@ -21,7 +22,6 @@ def _resolve_model_uri(raw_uri: str, tracking_uri: str) -> str:
     if alias_or_version.isdigit():
         return raw_uri
 
-    client = MlflowClient(tracking_uri)
     try:
         v = client.get_model_version_by_alias(model_name, alias_or_version)
         resolved = f"models:/{model_name}/{v.version}"
@@ -47,8 +47,7 @@ def _submission_filename(client: MlflowClient, run_id: str) -> str:
 )
 def submit(cfg: DictConfig) -> None:
 
-    mlflow.set_tracking_uri(cfg.mlflow.tracking_uri)
-    client = MlflowClient(cfg.mlflow.tracking_uri)
+    client = connect(cfg)
 
     model_uri = cfg.cli.get("model_uri")
     run_id = cfg.cli.get("run_id")
@@ -59,7 +58,7 @@ def submit(cfg: DictConfig) -> None:
         return
 
     if model_uri is not None:
-        model_uri = _resolve_model_uri(model_uri, cfg.mlflow.tracking_uri)
+        model_uri = _resolve_model_uri(model_uri, client)
         m = re.match(r"^models:/([^/]+)/(\d+)$", model_uri)
         if m:
             run_id = client.get_model_version(m.group(1), m.group(2)).run_id

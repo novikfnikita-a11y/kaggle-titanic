@@ -10,10 +10,18 @@ from mlflow.tracking import MlflowClient
 from omegaconf import DictConfig, OmegaConf
 
 
-def config_fingerprint(cfg: DictConfig) -> str:
+def connect(cfg: DictConfig) -> MlflowClient:
+    mlflow.set_tracking_uri(cfg.mlflow.tracking_uri)
+    return MlflowClient(cfg.mlflow.tracking_uri)
+
+
+def config_fingerprint(cfg: DictConfig, ignore_tuning: bool = True) -> str:
     data = OmegaConf.to_container(cfg, resolve=True)
     for key in ("hydra", "mlflow", "cli"):
         data.pop(key, None)
+    if ignore_tuning:
+        data.pop("tuning", None)
+        data.get("model", {}).pop("search", None)
     payload = json.dumps(data, sort_keys=True, default=str)
     return hashlib.sha256(payload.encode()).hexdigest()[:8]
 
@@ -51,11 +59,18 @@ def log_params(cfg: DictConfig) -> None:
     mlflow.log_params(params)
 
 
+def cv_label(cfg: DictConfig) -> str:
+    splitter = cfg.cv.splitter
+    name = str(splitter.get("_target_", "splitter")).rsplit(".", 1)[-1]
+    n_splits = splitter.get("n_splits")
+    return f"{name}_{n_splits}" if n_splits else name
+
+
 def log_tags(cfg: DictConfig, config_hash: str | None = None) -> None:
     tags = {
         "model": str(cfg.model.name),
         "seed": str(cfg.seed),
-        "cv": f"{cfg.cv.splitter}_{cfg.cv.n_splits}",
+        "cv": cv_label(cfg),
         "feature_set": str(cfg.feature_set.name),
     }
     if config_hash:
@@ -78,10 +93,6 @@ def _log_csv(dataframe: pd.DataFrame, path: str) -> None:
 
 def log_fold_metrics(fold_metrics: pd.DataFrame) -> None:
     _log_csv(fold_metrics, "metrics/fold_metrics.csv")
-
-
-def log_predictions(predictions: pd.DataFrame) -> None:
-    _log_csv(predictions, "predictions/test_predictions.csv")
 
 
 def log_submission(predictions: pd.DataFrame) -> None:

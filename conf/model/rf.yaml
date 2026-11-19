@@ -7,3 +7,8 @@ estimator:
   min_samples_leaf: 3
   max_features: sqrt
   random_state: ${seed}
+
+search:
+  clf__n_estimators: [200, 400]
+  clf__max_depth: [6, 8, 12]
+  clf__min_samples_leaf: [1, 3]
