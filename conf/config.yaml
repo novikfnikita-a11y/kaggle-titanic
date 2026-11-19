@@ -8,6 +8,7 @@ defaults:
   - _self_
 
 mlflow:
+  enabled: true
   experiment_name: "titanic-baseline"
   tracking_uri: "http://127.0.0.1:5000"
   run_name: null
@@ -30,11 +31,12 @@ data:
   id_column: PassengerId
 
 cv:
-  splitter: stratified_kfold
-  n_splits: 5
-  shuffle: true
-  random_state: ${seed}
-  aggregate: fold_ensemble
+  splitter:
+    _target_: sklearn.model_selection.StratifiedKFold
+    n_splits: 5
+    shuffle: true
+    random_state: ${seed}
+  ensemble: true
 
 hydra:
   run:

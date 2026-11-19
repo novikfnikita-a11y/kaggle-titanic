@@ -1,7 +1,7 @@
 import hydra
-import mlflow
-from mlflow.tracking import MlflowClient
 from omegaconf import DictConfig
+
+from src.kaggle_titanic.tracking import connect
 
 
 @hydra.main(
@@ -11,7 +11,7 @@ from omegaconf import DictConfig
 )
 def record_lb(cfg: DictConfig) -> None:
 
-    mlflow.set_tracking_uri(cfg.mlflow.tracking_uri)
+    client = connect(cfg)
 
     run_id = cfg.cli.get("run_id")
     score = cfg.cli.get("score")
@@ -21,7 +21,6 @@ def record_lb(cfg: DictConfig) -> None:
         print("укажи run_id и score")
         return
 
-    client = MlflowClient(cfg.mlflow.tracking_uri)
     client.log_metric(run_id, f"lb_{source}", float(score))
     client.set_tag(run_id, "lb_source", str(source))
 

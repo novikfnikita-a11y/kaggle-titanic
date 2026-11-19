@@ -35,6 +35,7 @@ artifacts/
 
 mlartifacts/
 mlflow.db
+mlflow.db-*
 mlruns/
 
 submissions/

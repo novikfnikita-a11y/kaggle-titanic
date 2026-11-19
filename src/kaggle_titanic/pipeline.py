@@ -2,13 +2,19 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+from hydra.utils import instantiate
 from omegaconf import DictConfig
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
+from sklearn.preprocessing import (
+    FunctionTransformer,
+    OneHotEncoder,
+    OrdinalEncoder,
+    StandardScaler,
+)
 
-from .features import FeatureEngineer
+from .features import add_features
 from .transformers import SelectColumns
 
 
@@ -38,6 +44,13 @@ def resolve_feature_columns(
     return numeric, categorical, ordinal
 
 
+def categorical_columns(
+    categorical: list[str],
+    ordinal: dict[str, list],
+) -> list[str]:
+    return list(categorical) + list(ordinal)
+
+
 def build_pipeline(
     numeric: list[str],
     categorical: list[str],
@@ -50,7 +63,7 @@ def build_pipeline(
 ) -> Pipeline:
     ordinal = ordinal or {}
 
-    steps: list[tuple[str, Any]] = [("features", FeatureEngineer())]
+    steps: list[tuple[str, Any]] = [("features", FunctionTransformer(add_features))]
 
     encoders = list(encoders)
     if encoders:
@@ -59,7 +72,7 @@ def build_pipeline(
         )
 
     if native_categorical:
-        cat_columns = list(categorical) + list(ordinal)
+        cat_columns = categorical_columns(categorical, ordinal)
         steps.append(("select", SelectColumns(numeric, cat_columns)))
         if estimator is not None:
             steps.append(("clf", estimator))
@@ -112,3 +125,33 @@ def build_pipeline(
         steps.append(("clf", estimator))
 
     return Pipeline(steps=steps)
+
+
+def build_from_config(cfg: DictConfig) -> tuple[Pipeline, list[str]]:
+    estimator = instantiate(cfg.model.estimator)
+
+    imputer_cfg = cfg.imputation.get("imputer")
+    imputer = instantiate(imputer_cfg) if imputer_cfg else None
+    encoders = [instantiate(encoder) for encoder in cfg.encoding.encoders]
+
+    numeric, categorical, ordinal = resolve_feature_columns(
+        cfg.groups, cfg.feature_set
+    )
+    cat_columns = categorical_columns(categorical, ordinal)
+
+    cat_arg = cfg.model.get("cat_feature_arg")
+    if cat_arg:
+        estimator.set_params(**{cat_arg: tuple(cat_columns)})
+
+    pipeline = build_pipeline(
+        numeric=numeric,
+        categorical=categorical,
+        ordinal=ordinal,
+        estimator=estimator,
+        imputer=imputer,
+        encoders=encoders,
+        scale=cfg.feature_set.scale,
+        native_categorical=cfg.preprocessing.get("native_categorical", False),
+    )
+
+    return pipeline, numeric + cat_columns
